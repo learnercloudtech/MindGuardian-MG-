@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "894505822242",
+    "project_id": "mindguardian-3b7cb",
+    "storage_bucket": "mindguardian-3b7cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894505822242:android:0c9f3fb3e0a801ebfc427b",
+        "android_client_info": {
+          "package_name": "com.rocketlabs.mindguardian.mindguardian"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCErB_SwOMTIx713I2oZhg9-FBM3XyP9eA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
