@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/granite_service.dart';
-import 'crisis_alert_screen.dart'; // 🚨 Alert route
+import '../services/nova_service.dart';
+import 'clinician_contact_screen.dart';
 
 class EmotionAgentScreen extends StatefulWidget {
   const EmotionAgentScreen({super.key});
@@ -24,26 +24,59 @@ class _EmotionAgentScreenState extends State<EmotionAgentScreen> {
       _isTyping = true;
     });
 
-    final aiResponse = await GraniteService().getAgentResponse(userText);
-
-    setState(() {
-      _messages.add(aiResponse);
-      _isTyping = false;
-    });
-
-    if ((aiResponse['riskScore'] as int? ?? 0) > 85) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CrisisAlertScreen()),
+    try {
+      final response = await NovaService().invokeNovaResponder(
+        prompt: userText,
+        userId: 'rocket001',
+        sessionId: 'emotion-agent-screen',
+        wrapPrompt: true,
       );
+
+      final agentReply = {
+        'role': 'agent',
+        'text': response['text'],
+        'emotion': response['emotion'],
+        'riskScore': response['riskScore'],
+        'recommendations': response['recommendations'],
+      };
+
+      setState(() {
+        _messages.add(agentReply);
+        _isTyping = false;
+      });
+
+      final riskScore = agentReply['riskScore'] as int? ?? 0;
+      if (riskScore >= 4) {
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ClinicianContactScreen()),
+          );
+        });
+      }
+    } catch (e) {
+      print("❌ Nova fetch failed: $e");
+      setState(() {
+        _messages.add({
+          'role': 'agent',
+          'text': 'MindGuardian is unavailable. Please try again later.',
+          'emotion': 'unknown',
+          'riskScore': 0,
+          'recommendations': [],
+        });
+        _isTyping = false;
+      });
     }
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> msg) {
     final isUser = msg['role'] == 'user';
-    final bubbleColor = isUser ? Colors.deepPurple.shade100 : Colors.grey.shade200;
+    final bubbleColor = isUser ? Colors.deepPurple[100] : Colors.grey[200];
     final align = isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final emotion = msg['emotion'];
+
+    final emotion = msg['emotion'] ?? 'unknown';
+    final riskScore = msg['riskScore']?.toString() ?? '0';
+    final recommendations = msg['recommendations'] as List<dynamic>? ?? [];
 
     return Align(
       alignment: align,
@@ -58,17 +91,32 @@ class _EmotionAgentScreenState extends State<EmotionAgentScreen> {
           crossAxisAlignment:
           isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Text(msg['text'], style: const TextStyle(fontSize: 15)),
-            if (emotion != null)
+            Text(msg['text'] ?? '', style: const TextStyle(fontSize: 15)),
+            if (!isUser)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Emotion: $emotion',
+                  'Emotion: $emotion | Risk Score: $riskScore',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontStyle: FontStyle.italic,
                     color: Colors.grey[600],
                   ),
+                ),
+              ),
+            if (recommendations.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Suggestions:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    ...recommendations.map((s) => Text('• $s',
+                        style: const TextStyle(fontSize: 12))),
+                  ],
                 ),
               ),
           ],

@@ -38,7 +38,7 @@ class JournalScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 🧠 Basic Mood Info
+                      // 🌈 Mood Summary Row
                       Row(
                         children: [
                           Text(emoji, style: const TextStyle(fontSize: 32)),
@@ -47,11 +47,15 @@ class JournalScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(log.note.isEmpty ? 'No note' : log.note,
-                                    style: const TextStyle(fontSize: 16)),
+                                Text(
+                                  log.note.isEmpty ? 'No note' : log.note,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                                 const SizedBox(height: 4),
-                                Text('${log.timestamp.toLocal()}'.split('.')[0],
-                                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                Text(
+                                  '${log.timestamp.toLocal()}'.split('.')[0],
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
                               ],
                             ),
                           ),
@@ -60,19 +64,35 @@ class JournalScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
-                      // 🧠 Agent Intelligence Section
+                      // 🧠 Granite Insight Section
                       if (log.agentReply != null && log.agentReply!.isNotEmpty) ...[
                         Divider(),
                         Text('🧠 Emotional Insight', style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 6),
-                        Text('Emotion: ${log.emotion ?? 'N/A'}'),
-                        Text('Agent says: ${log.agentReply}'),
+                        Text('Emotion: ${log.emotion ?? 'unknown'}'),
+                        const SizedBox(height: 4),
+                        Text('Agent Response: ${log.agentReply}'),
+                        const SizedBox(height: 6),
                         if ((log.riskScore ?? 0) > 85)
-                          Text('⚠️ High stress detected. Consider seeking support.',
-                              style: const TextStyle(color: Colors.red)),
+                          Text(
+                            '⚠️ High stress detected. Consider seeking support.',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        if ((log.riskScore ?? 0) <= 85 && (log.riskScore ?? 0) > 60)
+                          Text(
+                            '🔶 Moderate stress noted. Keep monitoring your mood.',
+                            style: const TextStyle(color: Colors.orange),
+                          ),
+                        const SizedBox(height: 6),
                         if (log.recommendations != null && log.recommendations!.isNotEmpty)
-                          Text('Suggestions: ${log.recommendations!.join(", ")}'),
-                      ]
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Suggestions:'),
+                              ...log.recommendations!.map((s) => Text('• $s')),
+                            ],
+                          ),
+                      ],
                     ],
                   ),
                 ),

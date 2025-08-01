@@ -10,16 +10,16 @@ import 'study_buddy_ai_screen.dart';
 import 'crisis_alert_screen.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({Key? key}) : super(key: key);
+  const MainNavigation({super.key});
 
   @override
-  _MainNavigationState createState() => _MainNavigationState();
+  State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  static final List<String> _titles = [
+  static const List<String> _titles = [
     "Mood",
     "Agent",
     "Diet",
@@ -29,48 +29,33 @@ class _MainNavigationState extends State<MainNavigation> {
     "Crisis",
   ];
 
-  static final List<Widget Function()> _screenBuilders = [
-        () => const MoodTrackerScreen(),
-        () => const EmotionAgentScreen(),
-        () => const DietMentalFoodScreen(),
-        () => const ExerciseTrackerScreen(),
-        () => const AcademicSupportScreen(),
-        () => const StudyBuddyAIScreen(),
-        () => const CrisisAlertScreen(),
+  static final List<Widget> _screens = [
+    const MoodTrackerScreen(),
+    const EmotionAgentScreen(),
+    const DietMentalFoodScreen(),
+    const ExerciseTrackerScreen(),
+    const AcademicSupportScreen(),
+    const StudyBuddyAIScreen(),
+    const CrisisAlertScreen(),
   ];
 
   void _onTabSelected(int index) {
-    print("📲 Tab selected: ${_titles[index]}");
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  Widget _loadScreenSafely(int index) {
-    try {
-      print("🔍 Attempting to load: ${_titles[index]}");
-      return _screenBuilders[index]();
-    } catch (e) {
-      print("❌ Error rendering screen [$index]: $e");
-      return Center(
-        child: Text(
-          "Failed to load ${_titles[index]} screen.\nPlease check logs.",
-          style: const TextStyle(fontSize: 16, color: Colors.red),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
-    print("🧭 Building MainNavigation with active tab: ${_titles[_selectedIndex]}");
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("MindGuardian • ${_titles[_selectedIndex]}"),
+        title: Text(
+          "MindGuardian • ${_titles[_selectedIndex]}",
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: theme.colorScheme.primary,
       ),
-      body: _loadScreenSafely(_selectedIndex),
+      body: SafeArea(child: _screens[_selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onTabSelected,

@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
-import 'day_planner_screen.dart'; // 👈 Make sure this file exists
+import 'day_planner_screen.dart';
 
 class TimetableScreen extends StatelessWidget {
   const TimetableScreen({super.key});
+
+  DateTime _getDateForWeekday(String weekday) {
+    final now = DateTime.now();
+    final weekdayMap = {
+      'Monday': DateTime.monday,
+      'Tuesday': DateTime.tuesday,
+      'Wednesday': DateTime.wednesday,
+      'Thursday': DateTime.thursday,
+      'Friday': DateTime.friday,
+      'Saturday': DateTime.saturday,
+      'Sunday': DateTime.sunday,
+    };
+
+    final targetWeekday = weekdayMap[weekday] ?? now.weekday;
+    final offset = targetWeekday - now.weekday;
+    return now.add(Duration(days: offset));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +34,7 @@ class TimetableScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Your Weekly Rituals',
@@ -27,20 +45,21 @@ class TimetableScreen extends StatelessWidget {
               child: ListView.builder(
                 itemCount: days.length,
                 itemBuilder: (_, index) {
-                  final day = days[index];
+                  final dayLabel = days[index];
+                  final dayDate = _getDateForWeekday(dayLabel);
 
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
-                      leading: CircleAvatar(child: Text(day[0])),
-                      title: Text(day),
-                      subtitle: const Text('Tap to edit your routine'),
+                      leading: CircleAvatar(child: Text(dayLabel[0])),
+                      title: Text(dayLabel),
+                      subtitle: Text('Tap to edit your routine'),
                       trailing: const Icon(Icons.arrow_forward_ios),
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => DayPlannerScreen(day: day),
+                            builder: (_) => DayPlannerScreen(day: dayDate),
                           ),
                         );
                       },

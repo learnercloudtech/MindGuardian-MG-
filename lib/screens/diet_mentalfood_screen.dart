@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import '../models/mental_meal.dart'; // Make sure this points correctly
+import '../models/mental_meal.dart';
+import '../services/nova_service.dart';
 
 class DietMentalFoodScreen extends StatefulWidget {
   const DietMentalFoodScreen({super.key});
@@ -14,6 +15,11 @@ class _DietMentalFoodScreenState extends State<DietMentalFoodScreen> {
   final TextEditingController _foodController = TextEditingController();
   String _selectedMood = 'Neutral';
 
+  String agentReply = '';
+  String emotion = '';
+  List<String> recommendations = [];
+  bool isLoading = false;
+
   final List<String> _moods = ['Energized', 'Calm', 'Sluggish', 'Neutral'];
 
   @override
@@ -23,16 +29,13 @@ class _DietMentalFoodScreenState extends State<DietMentalFoodScreen> {
   }
 
   Future<void> _openMealBox() async {
-    if (Hive.isBoxOpen('mentalMeals')) {
-      _mealBox = Hive.box<MentalMeal>('mentalMeals');
-    } else {
-      _mealBox = await Hive.openBox<MentalMeal>('mentalMeals');
-    }
-    print("🍽️ mentalMeals box is ready");
-    setState(() {}); // Refresh UI after box opens
+    _mealBox = Hive.isBoxOpen('mentalMeals')
+        ? Hive.box<MentalMeal>('mentalMeals')
+        : await Hive.openBox<MentalMeal>('mentalMeals');
+    setState(() {});
   }
 
-  void _addEntry() {
+  Future<void> _addEntry() async {
     final food = _foodController.text.trim();
     if (food.isEmpty) return;
 
@@ -44,14 +47,43 @@ class _DietMentalFoodScreenState extends State<DietMentalFoodScreen> {
 
     _mealBox.add(newMeal);
     _foodController.clear();
-
     setState(() {
       _selectedMood = 'Neutral';
+      agentReply = '';
+      emotion = '';
+      recommendations = [];
+      isLoading = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logged "$food" with mood "$_selectedMood" ✅')),
-    );
+    final prompt =
+        "User ate '$food' and feels $_selectedMood after it. Suggest mood-balancing foods and emotional support.";
+
+    try {
+      final result = await NovaService().invokeNovaResponder(
+        prompt: prompt,
+        userId: 'rocket001',
+        sessionId: 'diet-mental-food',
+      );
+
+      setState(() {
+        agentReply = result['text'] ?? 'Let’s explore how food affects your mind.';
+        emotion = result['emotion'] ?? 'unknown';
+        recommendations = result['recommendations'] is List
+            ? List<String>.from(result['recommendations'])
+            : <String>[];
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logged "$food" with mood "$_selectedMood" ✅')),
+      );
+    } catch (e) {
+      print("❌ Nova fetch failed: $e");
+      setState(() {
+        isLoading = false;
+        agentReply = 'Agent unavailable. Try again later.';
+      });
+    }
   }
 
   @override
@@ -86,10 +118,12 @@ class _DietMentalFoodScreenState extends State<DietMentalFoodScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _selectedMood,
-              items: _moods.map((mood) => DropdownMenuItem(
+              items: _moods
+                  .map((mood) => DropdownMenuItem(
                 value: mood,
                 child: Text(mood),
-              )).toList(),
+              ))
+                  .toList(),
               onChanged: (val) => setState(() => _selectedMood = val ?? 'Neutral'),
               decoration: const InputDecoration(
                 labelText: 'Mood after eating',
@@ -102,14 +136,52 @@ class _DietMentalFoodScreenState extends State<DietMentalFoodScreen> {
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text('Log Meal', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade700, // 🌿 Brighter and more visible
+                backgroundColor: Colors.green.shade700,
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 elevation: 4,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            if (isLoading)
+              const CircularProgressIndicator()
+            else if (agentReply.isNotEmpty)
+              Expanded(
+                flex: 2,
+                child: SingleChildScrollView(
+                  child: Card(
+                    color: Colors.green.shade50,
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('🧠 AI Suggestions', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text('Emotion: $emotion'),
+                          const SizedBox(height: 6),
+                          Text(agentReply),
+                          const SizedBox(height: 8),
+                          if (recommendations.isNotEmpty)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Recommended Foods:',
+                                    style: TextStyle(fontWeight: FontWeight.bold)),
+                                ...recommendations.map((f) => Text('• $f'))
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              const SizedBox(height: 8),
             Expanded(
+              flex: 3,
               child: _mealBox.isEmpty
                   ? const Center(child: Text('No meals logged yet.'))
                   : ListView.builder(
@@ -117,8 +189,8 @@ class _DietMentalFoodScreenState extends State<DietMentalFoodScreen> {
                 itemBuilder: (_, index) {
                   final meal = _mealBox.getAt(index);
                   if (meal == null) return const SizedBox.shrink();
-
-                  final time = '${meal.timestamp.hour}:${meal.timestamp.minute.toString().padLeft(2, '0')}';
+                  final time =
+                      '${meal.timestamp.hour}:${meal.timestamp.minute.toString().padLeft(2, '0')}';
                   return Card(
                     elevation: 2,
                     child: ListTile(

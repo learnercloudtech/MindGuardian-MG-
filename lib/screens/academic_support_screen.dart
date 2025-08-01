@@ -2,16 +2,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class AcademicSupportScreen extends StatefulWidget {
-  const AcademicSupportScreen({Key? key}) : super(key: key);
+  const AcademicSupportScreen({super.key});
 
   @override
-  _AcademicSupportScreenState createState() => _AcademicSupportScreenState();
+  State<AcademicSupportScreen> createState() => _AcademicSupportScreenState();
 }
 
 class _AcademicSupportScreenState extends State<AcademicSupportScreen> {
   int _timeLeft = 25 * 60;
   Timer? _timer;
   bool isRunning = false;
+  bool sessionComplete = false;
 
   final List<String> _goals = [
     "Review biology notes 🧬",
@@ -32,13 +33,28 @@ class _AcademicSupportScreenState extends State<AcademicSupportScreen> {
           timer.cancel();
           setState(() {
             isRunning = false;
+            sessionComplete = true;
             _timeLeft = 25 * 60;
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Pomodoro complete! Take a short break 🌿')),
+          );
         }
       });
     }
+
     setState(() {
       isRunning = !isRunning;
+      sessionComplete = false;
+    });
+  }
+
+  void _resetTimer() {
+    _timer?.cancel();
+    setState(() {
+      _timeLeft = 25 * 60;
+      isRunning = false;
+      sessionComplete = false;
     });
   }
 
@@ -50,8 +66,14 @@ class _AcademicSupportScreenState extends State<AcademicSupportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final buttonColor = isRunning ? Colors.red : Colors.green;
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Academic Support")),
+      appBar: AppBar(
+        title: const Text("Academic Support"),
+        backgroundColor: theme.colorScheme.primary,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -65,10 +87,20 @@ class _AcademicSupportScreenState extends State<AcademicSupportScreen> {
               _formatTime(_timeLeft),
               style: const TextStyle(fontSize: 48),
             ),
-            ElevatedButton(
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
               onPressed: _toggleTimer,
-              child: Text(isRunning ? "Pause" : "Start Focus Session"),
+              icon: Icon(isRunning ? Icons.pause : Icons.play_arrow),
+              label: Text(isRunning ? "Pause" : "Start Focus Session"),
+              style: ElevatedButton.styleFrom(backgroundColor: buttonColor),
             ),
+            const SizedBox(height: 8),
+            if (!isRunning)
+              TextButton.icon(
+                onPressed: _resetTimer,
+                icon: const Icon(Icons.restart_alt),
+                label: const Text("Reset Timer"),
+              ),
             const Divider(height: 32),
             const Text(
               "Today's Study Goals 📝",
@@ -83,6 +115,7 @@ class _AcademicSupportScreenState extends State<AcademicSupportScreen> {
             const Text(
               "“Small steps lead to big victories.” 💚",
               style: TextStyle(fontStyle: FontStyle.italic),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

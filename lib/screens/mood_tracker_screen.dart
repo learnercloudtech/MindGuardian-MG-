@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/mood_log.dart';
 import '../services/firestore_service.dart';
-import '../services/granite_service.dart';
+import '../services/nova_service.dart';
 import '../widgets/emoji_slider.dart';
 
 class MoodTrackerScreen extends StatefulWidget {
@@ -20,6 +20,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   String emotion = '';
   int riskScore = 0;
   List<String> suggestions = [];
+  bool isLoading = false;
 
   Future<void> _saveMoodLog() async {
     final message = _noteController.text.trim();
@@ -30,20 +31,28 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       return;
     }
 
+    final prompt = "User mood score: ${_moodValue.toInt()}.\nNote: $message";
+    print("🚀 Nova Prompt: $prompt");
+
+    setState(() => isLoading = true);
+
     try {
-      final granite = GraniteService();
-      final result = await granite.getAgentResponse(message);
+      final result = await NovaService().invokeNovaResponder(
+        prompt: prompt,
+        userId: 'rocket001',
+        sessionId: 'mood-tracker',
+      );
 
       final moodLog = MoodLog(
         moodScore: _moodValue.toInt(),
         note: message,
         timestamp: DateTime.now(),
-        agentReply: result['text'],
-        emotion: result['emotion'],
-        riskScore: result['riskScore'],
-        recommendations: List<String>.from(
-          result['recommendations'] is List ? result['recommendations'] : <String>[],
-        ),
+        agentReply: result['text'] ?? '',
+        emotion: result['emotion'] ?? 'neutral',
+        riskScore: result['riskScore'] is int ? result['riskScore'] : int.tryParse(result['riskScore']?.toString() ?? '0') ?? 0,
+        recommendations: result['recommendations'] is List
+            ? List<String>.from(result['recommendations'])
+            : <String>[],
       );
 
       final box = Hive.isBoxOpen('moodLogs')
@@ -56,17 +65,18 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       print("☁️ MoodLog synced to Firestore");
 
       setState(() {
-        agentReply = moodLog.agentReply ?? '';
-        emotion = moodLog.emotion ?? '';
-        riskScore = moodLog.riskScore ?? 0;
+        agentReply = moodLog.agentReply!;
+        emotion = moodLog.emotion!;
+        riskScore = moodLog.riskScore!;
         suggestions = moodLog.recommendations ?? [];
         _moodValue = 5.0;
         _noteController.clear();
+        isLoading = false;
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mood logged, synced, and processed!')),
+          const SnackBar(content: Text('Mood logged & analyzed ✅')),
         );
 
         if (riskScore > 85) {
@@ -85,7 +95,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    // TODO: Navigate to support page or open referral link
+                    // TODO: Link support resources here
                   },
                   child: const Text('Get Support'),
                 ),
@@ -95,7 +105,8 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
         }
       }
     } catch (e) {
-      print("❌ Granite error: $e");
+      print("❌ Nova fetch failed: $e");
+      setState(() => isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Agent is unavailable. Try again later.")),
@@ -144,13 +155,16 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
               icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
               label: const Text('Log & Get Suggestions', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                backgroundColor: Colors.teal.shade600,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 4,
               ),
             ),
             const SizedBox(height: 32),
-            if (agentReply.isNotEmpty)
+            if (isLoading)
+              const CircularProgressIndicator()
+            else if (agentReply.isNotEmpty)
               Card(
                 color: Colors.blue.shade50,
                 elevation: 2,
@@ -162,8 +176,18 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
                       Text('🧠 Emotional Analysis', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Text('Emotion: $emotion'),
-                      Text('Agent Response: $agentReply'),
-                      Text('Suggestions: ${suggestions.isNotEmpty ? suggestions.join(", ") : "None"}'),
+                      const SizedBox(height: 4),
+                      Text('Agent Response:\n$agentReply'),
+                      const SizedBox(height: 4),
+                      if (suggestions.isNotEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            const Text('Suggestions:'),
+                            ...suggestions.map((s) => Text('• $s')),
+                          ],
+                        ),
                     ],
                   ),
                 ),

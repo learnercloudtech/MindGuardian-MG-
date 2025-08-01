@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'mood_tracker_screen.dart';
+import 'emotion_agent_screen.dart';
+import 'diet_mentalfood_screen.dart';
+import 'study_buddy_ai_screen.dart';
 import 'journal_screen.dart';
-// Later: import 'emotion_agent_screen.dart';
-// Later: import 'academic_support_screen.dart';
-// Later: import 'timed_screen.dart';
+import 'academic_support_screen.dart';
+import 'exercise_tracker_screen.dart';
+import 'clinician_contact_screen.dart';
+import 'day_planner_screen.dart';
+import 'timetable_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   void _navigate(BuildContext context, Widget screen) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -23,8 +26,8 @@ class DashboardScreen extends StatelessWidget {
         title: const Text('MindGuardian'),
         backgroundColor: theme.colorScheme.primary,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -37,26 +40,68 @@ class DashboardScreen extends StatelessWidget {
             _buildSectionCard(
               context,
               icon: Icons.self_improvement,
-              title: 'Emotional Assistance',
-              subtitle: 'Track moods, journal thoughts, talk to AI',
-              screen: const MoodTrackerScreen(), // Later: use EmotionAgentScreen
+              title: 'Mood & Emotional Support',
+              subtitle: 'Track mood, talk to AI, reflect and recover',
+              screen: const MoodTrackerScreen(),
+            ),
+            _buildSectionCard(
+              context,
+              icon: Icons.chat_bubble_outline,
+              title: 'MindGuardian Agent',
+              subtitle: 'Talk about how you feel — live agent replies',
+              screen: const EmotionAgentScreen(),
+            ),
+            _buildSectionCard(
+              context,
+              icon: Icons.restaurant_menu,
+              title: 'Diet & Mental Meals',
+              subtitle: 'Log meals and get mood-based food advice',
+              screen: const DietMentalFoodScreen(),
+            ),
+            _buildSectionCard(
+              context,
+              icon: Icons.school_outlined,
+              title: 'Study Buddy AI',
+              subtitle: 'Ask questions, learn deeply, save responses',
+              screen: const StudyBuddyAIScreen(),
+            ),
+            _buildSectionCard(
+              context,
+              icon: Icons.menu_book,
+              title: 'Academic Support',
+              subtitle: 'Fight procrastination, stay productive',
+              screen: const AcademicSupportScreen(),
             ),
             _buildSectionCard(
               context,
               icon: Icons.fitness_center,
-              title: 'Personal Management',
-              subtitle: 'Timetable, meals, exercise log',
-              screen: const Scaffold(
-                body: Center(child: Text('Coming soon...')),
-              ),
+              title: 'Exercise Tracker',
+              subtitle: 'Log workouts, track energy flow',
+              screen: const ExerciseTrackerScreen(),
             ),
             _buildSectionCard(
               context,
-              icon: Icons.school,
-              title: 'Educational Support',
-              subtitle: 'Avoid stress, fight procrastination, study better',
-              screen: const Scaffold(
-                body: Center(child: Text('Coming soon...')),
+              icon: Icons.calendar_month,
+              title: 'Day Planner',
+              subtitle: 'Plan your goals and daily routine',
+              screen: DayPlannerScreen(day: DateTime.now()),
+            ),
+            _buildSectionCard(
+              context,
+              icon: Icons.schedule,
+              title: 'Timetable',
+              subtitle: 'Manage academic or work slots',
+              screen: const TimetableScreen(),
+            ),
+            _buildSectionCard(
+              context,
+              icon: Icons.local_hospital,
+              title: 'Clinician Contact',
+              subtitle: 'Reach out to professionals when you need help',
+              screen: const ClinicianContactScreen(
+                name: 'Support Team',
+                phone: '+91-9876543210',
+                email: 'support@mindguardian.ai',
               ),
             ),
             const SizedBox(height: 20),
